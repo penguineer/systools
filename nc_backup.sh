@@ -1,4 +1,20 @@
 #! /bin/bash
+#
+# Backup for a NextCloud instance running inside a docker container.
+#
+# Configuration via environment:
+#	NC_INSTANCE	name of the docker container (default: nextcloud)
+#	NC_USER		name of the nextcloud system user (default: www-data)
+#	NC_BASE		base directory for nextcloud files (default: /var/www/html)
+#	NC_DSTPATH	destination base path for the backup (default: pwd)
+#
+# For the process see
+# https://docs.nextcloud.com/server/13/admin_manual/maintenance/backup.html
+#
+# Author: Stefan Haun <tux@netz39.de>
+#
+# SPDX-License-Identifier: MIT
+# License-Filename: LICENSES/MIT.txt
 
 DEFAULT_NC_INSTANCE=nextcloud
 DEFAULT_NC_USER=www-data
