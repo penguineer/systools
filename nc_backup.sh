@@ -121,7 +121,7 @@ if [ -z "$NC_DSTPATH" ]; then
 	exit 1
 fi
 
-mkdir -p $NC_DSTPATH
+mkdir -p "$NC_DSTPATH"
 if [ ! -d "$NC_DSTPATH" ]; then
 	echoerr "Destination path does not exist and could not be created!"
 	exit 1
