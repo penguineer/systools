@@ -13,7 +13,7 @@ Caches are discarded when the container is rebuilt.
 ## Setup
 
 * Deploy the docker container at a host reachable as `apt-proxy`.
-* (Optional) Copy the file `01proxy` to `/etc/apt/conf.d`
+* (Optional) Copy the file `detect-apt-proxy.sh` to `/usr/local/bin` and  `01proxy` to `/etc/apt/conf.d`
 * (Optional) Open port 3142 in the host's firewall
 
 ## Shell trail
