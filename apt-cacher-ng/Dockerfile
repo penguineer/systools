@@ -7,6 +7,10 @@ RUN         apt-get update && \
             && \
             rm -rf /var/lib/apt/lists/*
 
+# https://wiki.debian.org/AptCacherNg#HTTPS_repositories lists some alternative
+# options or handing HTTPS issues
+RUN         echo "PassThroughPattern: ^(.*):443$" >> /etc/apt-cacher-ng/acng.conf
+
 EXPOSE      3142
 
 CMD         chmod 777 /var/cache/apt-cacher-ng && \
