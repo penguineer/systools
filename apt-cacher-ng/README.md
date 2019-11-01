@@ -32,3 +32,9 @@ Show logs
 ```
 docker logs -f apt_cacher_ng
 ```
+
+Install scripts:
+```
+sudo cp detect-apt-proxy.sh /usr/local/bin/
+sudo cp 01proxy /etc/apt/apt.conf.d/
+```
