@@ -16,7 +16,7 @@ fi
 
 timeout 1 bash -c 'cat < /dev/null > /dev/tcp/${HOST_IP}/${APT_PROXY_PORT}' 2> /dev/null
 if [ $? -eq 0 ]; then
-    echo "${HOST_IP}:${APT_PROXY_PORT}"
+    echo "http://${HOST_IP}:${APT_PROXY_PORT}"
 else
     echo "DIRECT"
 fi
