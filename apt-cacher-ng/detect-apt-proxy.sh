@@ -8,13 +8,13 @@
 # return values
 
 if [ -z $APT_PROXY_PORT ] ; then
-  export APT_PROXY_PORT=3142
+  APT_PROXY_PORT=3142
 fi
 if [ -z "${HOST_IP}" ]; then
-  export HOST_IP="apt-proxy"
+  HOST_IP="apt-proxy"
 fi
 
-timeout 1 bash -c 'cat < /dev/null > /dev/tcp/${HOST_IP}/${APT_PROXY_PORT}' 2> /dev/null
+timeout 1 cat < /dev/null > /dev/tcp/${HOST_IP}/${APT_PROXY_PORT} 2> /dev/null
 if [ $? -eq 0 ]; then
     echo "http://${HOST_IP}:${APT_PROXY_PORT}"
 else
