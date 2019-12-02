@@ -16,6 +16,9 @@ Caches are discarded when the container is rebuilt.
 * (Optional) Copy the file `detect-apt-proxy.sh` to `/usr/local/bin` and  `01proxy` to `/etc/apt/conf.d`
 * (Optional) Open port 3142 in the host's firewall
 
+The scripts have been moved to [penguineer/debian_apt-proxy-detect on GitHub](https://github.com/penguineer/debian_apt-proxy-detect).
+
+
 ## Shell trail
 
 Build:
@@ -31,10 +34,4 @@ docker run -d -p 3142:3142 --restart always --name apt_cacher_ng eg_apt_cacher_n
 Show logs
 ```
 docker logs -f apt_cacher_ng
-```
-
-Install scripts:
-```
-sudo cp detect-apt-proxy.sh /usr/local/bin/
-sudo cp 01proxy /etc/apt/apt.conf.d/
 ```
