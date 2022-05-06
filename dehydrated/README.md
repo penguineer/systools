@@ -4,13 +4,13 @@ Wrap dehydrated calls so that cron e-mails are only sent when the call fails or 
 
 ## Usage
 
-Currently dehydrated is assumed at `/usr/local/bin/dehydrated` with it's configuration in `/usr/local/etc/dehydrated`. If you have a different setup, you need to adapt the scripts accordingly.
+Currently dehydrated is assumed at `/usr/local/bin/dehydrated` with it's domain configuration in `/usr/local/etc/dehydrated/domains.txt`. If you have a different setup, please adapt the scripts accordingly.
 
 ### dehy-wrap.sh
 
 Configuration (so far) is in the script itself if necessary.
 
-When an integer command-line argument is provided, the script will output its result if it has more lines than this number states.
+The script calculates the number of "idle" (i.e. nothing needs to be done) output lines based on the number of entries in your `domains.txt` configuration.
 
 ### dehy-check.sh
 
@@ -21,7 +21,7 @@ This is an indication for a malfunctioning dehydrated setup.
 
 I use the following cron entries (for root):
 ```
-0 3 * * * /usr/local/bin/dehy-wrap.sh 6
+0 3 * * * /usr/local/bin/dehy-wrap.sh
 0 4 * * * /usr/local/bin/dehy-check.sh
 ```
 
