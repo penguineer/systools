@@ -27,5 +27,4 @@ I use the following cron entries (for root):
 
 ## Next steps
 
-* The line count is implemented to get an e-mail when deyhdrated issues new certificates. Obviously this should be done (at least) via a grep for signal strings or via a special return code in dehydrated.
 * Configuration should be kept outside the scripts.
