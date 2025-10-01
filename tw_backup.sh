@@ -1,5 +1,5 @@
 #! /bin/bash
-#
+
 # Backup for a TwentyCRM instance running inside a docker container.
 #
 # Configuration via environment:
@@ -14,6 +14,8 @@
 #
 # SPDX-License-Identifier: MIT
 # License-Filename: LICENSES/MIT.txt
+
+set -Eeuo pipefail
 
 DEFAULT_TW_DB_INSTANCE=twenty-db-1
 DEFAULT_TW_POSTGRES_USER=postgres
