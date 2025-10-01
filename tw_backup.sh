@@ -63,6 +63,8 @@ function echoerr() {
 ## Create tmp dir
 TMPDIR=$(mktemp -d)
 
+trap 'rm -rf "$TMPDIR"' EXIT
+
 if [[ ! "$TMPDIR" || ! -d "$TMPDIR" ]]; then
 	echoerr "Could not create temporary directory!"
 	exit 1
