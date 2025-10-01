@@ -19,9 +19,17 @@ DEFAULT_TW_DB_INSTANCE=twenty-db-1
 DEFAULT_TW_POSTGRES_USER=postgres
 DEFAULT_TW_DSTPATH=$(pwd)
 
-DOCKER=/usr/bin/docker
-BZIP2=/bin/bzip2
+DOCKER="$(command -v docker)"
+BZIP2="$(command -v bzip2)"
 
+if [ -z "$DOCKER" ]; then
+  echo "Error: docker not found in PATH." >&2
+  exit 1
+fi
+if [ -z "$BZIP2" ]; then
+  echo "Error: bzip2 not found in PATH." >&2
+  exit 1
+fi
 ## Check parameters
 if [ -z "${TW_DB_INSTANCE:-}" ]; then
 	TW_DB_INSTANCE=$DEFAULT_TW_DB_INSTANCE
