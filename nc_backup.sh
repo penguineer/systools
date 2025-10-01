@@ -86,12 +86,14 @@ function maintenance_mode() {
 ## Create tmp dir
 TMPDIR=$(mktemp -d)
 
+trap 'rm -rf "$TMPDIR"' EXIT
+
 if [[ ! "$TMPDIR" || ! -d "$TMPDIR" ]]; then
 	echoerr "Could not create temporary directory!"
 	exit 1
 fi;
 
-pushd $TMPDIR
+pushd $TMPDIR || exit
 
 ## Activate Maintenance Mode
 maintenance_mode on
@@ -153,7 +155,7 @@ mv "$TMPDIR/db.dump.bz2" "$NC_DSTPATH"
 ## Cleanup
 echo "Cleanup …"
 
-popd
+popd || exit
 
 if [ -d "$TMPDIR" ]; then
 	rm -rf "$TMPDIR"
