@@ -12,57 +12,43 @@
 # For the process see
 # https://docs.nextcloud.com/server/13/admin_manual/maintenance/backup.html
 #
+# Note: This script is intended to be run from a cron job and therefore does not
+# have access to a terminal. All output is sent to stdout/stderr.
+#
 # Author: Stefan Haun <tux@netz39.de>
 #
 # SPDX-License-Identifier: MIT
 # License-Filename: LICENSES/MIT.txt
 
+# Include utils
+. "$(dirname "$0")/backup-utils.sh"
+
+# Abort and clean up when interrupted
+trap 'exit 130' INT
+
+require_command DOCKER docker
+require_command SQLITE sqlite3
+require_command TAR tar
+require_command BZIP2 bzip2
+
+## Check arguments
 DEFAULT_NC_INSTANCE=nextcloud
 DEFAULT_NC_USER=www-data
 DEFAULT_NC_BASE=/var/www/html
 DEFAULT_NC_DSTPATH=$(pwd)
 
-DOCKER=/usr/bin/docker
-SQLITE=/usr/bin/sqlite3
-TAR=/bin/tar
-BZIP2=/bin/bzip2
+set_default_argument NC_INSTANCE "$DEFAULT_NC_INSTANCE" "instance"
+set_default_argument NC_USER "$DEFAULT_NC_USER" "user"
+set_default_argument NC_BASE "$DEFAULT_NC_BASE" "base path"
+set_default_argument NC_DSTPATH "$DEFAULT_NC_DSTPATH" "destination path"
+
 DIRS=( "config" "data" "themes" "apps")
 
-## Check parameters
-if [ -z "$NC_INSTANCE" ]; then
-	NC_INSTANCE=$DEFAULT_NC_INSTANCE
-	echo "Using default instance $NC_INSTANCE."
-else
-	echo "Using override instance $NC_INSTANCE."
-fi
-
-if [ -z "$NC_USER" ]; then
-	NC_USER=$DEFAULT_NC_USER
-	echo "Using default user $NC_USER."
-else
-	echo "Using override user $NC_USER."
-fi
-
-if [ -z "$NC_BASE" ]; then
-	NC_BASE=$DEFAULT_NC_BASE
-	echo "Using default base path $NC_BASE."
-else
-	echo "Using override base path $NC_BASE."
-fi
-
-if [ -z "$NC_DSTPATH" ]; then
-	NC_DSTPATH=$DEFAULT_NC_DSTPATH
-	echo "Using default destination path $NC_DSTPATH (current wirking directory)."
-else
-	echo "Using override destination path $NC_DSTPATH."
-fi
-
-
-# https://stackoverflow.com/questions/2990414/echo-that-outputs-to-stderr
-function echoerr() {
-	printf "%s\n" "$*" >&2;
-}
-
+# Function to enable/disable maintenance mode
+# Usage: maintenance_mode MODE
+#   MODE is either "on" or "off"
+#   Returns 0 on success, 1 on failure
+LAST_MAINTENANCE_MODE=""
 function maintenance_mode() {
 	local MODE=$1
 	
@@ -70,6 +56,8 @@ function maintenance_mode() {
 		echoerr "Maintenance mode has not been specified!"
 		return 1
 	fi
+
+	LAST_MAINTENANCE_MODE="$MODE"
 	
 	if [ "$MODE" == "on" ] || [ "$MODE" == "off" ]; then
 		#maintenance mode
@@ -83,28 +71,24 @@ function maintenance_mode() {
 }
 
 # Create tmp dir
-if [ -n "$TMP_PREFIX" ]; then
-  mkdir -p "$TMP_PREFIX"
-  TMPDIR=$(mktemp -d -p "$TMP_PREFIX" -t "nextcloud.XXXXXX")
-else
-  TMPDIR=$(mktemp -d -t "nextcloud.XXXXXX")
-fi
+TMPDIR=$(create_tmpdir "nextcloud" "$TMP_PREFIX")
+echo "Using temporary directory $TMPDIR"
 
-if [[ ! "$TMPDIR" || ! -d "$TMPDIR" ]]; then
-	echoerr "Could not create temporary directory!"
-	exit 1
-fi;
-
-# Make sure we remove the tmp directory on exit and errors
-trap 'rm -rf "$TMPDIR"' EXIT
+cleanup() {
+  if [ "$LAST_MAINTENANCE_MODE" == "on" ]; then
+    echo "Deactivating maintenance mode …"
+    maintenance_mode off
+  fi
+  safe_popd
+  rm -rf "$TMPDIR"
+}
+trap cleanup EXIT
 
 pushd "$TMPDIR" || exit
 
 ## Activate Maintenance Mode
 maintenance_mode on
-if [ "$?" != "0" ]; then
-	exit $?
-fi
+propagate_error_condition
 
 ## Copy backup data
 
@@ -112,9 +96,7 @@ for d in "${DIRS[@]}"
 do
 	echo "Copying from $NC_INSTANCE:$NC_BASE/$d to $TMPDIR …"
 	$DOCKER cp -a "$NC_INSTANCE:$NC_BASE/$d" "$TMPDIR"
-	if [ "$?" != "0" ]; then
-		exit $?
-	fi
+	propagate_error_condition
 done
 
 ## Deactivate Maintenance Mode
@@ -126,23 +108,23 @@ fi
 
 ## Export Database
 echo "Exporting database …"
+
 $SQLITE "$TMPDIR/data/owncloud.db" .dump > "$TMPDIR/db.dump"
+propagate_error_condition
+
 $BZIP2 "$TMPDIR/db.dump"
+propagate_error_condition
 
 ## Pack File Data
 echo "Packing file data …"
 for d in "${DIRS[@]}"
 do
-	tar cjf "$TMPDIR/$d.tar.bz2" "$d"
+	$TAR cjf "$TMPDIR/$d.tar.bz2" "$d"
+	propagate_error_condition
 done
 
 ## Copy to backup location
 echo "Copy to backup location …"
-
-if [ -z "$NC_DSTPATH" ]; then
-	echoerr "Destination path has not been provided in NC_DSTPATH!"
-	exit 1
-fi
 
 mkdir -p "$NC_DSTPATH"
 if [ ! -d "$NC_DSTPATH" ]; then
@@ -157,9 +139,5 @@ done
 
 mv "$TMPDIR/db.dump.bz2" "$NC_DSTPATH"
 
-## Cleanup
-popd || exit
-
-# $TMPDIR will be removed by the trap
-
 echo "Done."
+## Cleanup is done by the trap
