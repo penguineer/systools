@@ -7,6 +7,7 @@
 #	NC_USER		name of the nextcloud system user (default: www-data)
 #	NC_BASE		base directory for nextcloud files (default: /var/www/html)
 #	NC_DSTPATH	destination base path for the backup (default: pwd)
+# TMP_PREFIX  prefix for the temporary directory (default: auto, see mktemp)
 #
 # For the process see
 # https://docs.nextcloud.com/server/13/admin_manual/maintenance/backup.html
@@ -20,7 +21,6 @@ DEFAULT_NC_INSTANCE=nextcloud
 DEFAULT_NC_USER=www-data
 DEFAULT_NC_BASE=/var/www/html
 DEFAULT_NC_DSTPATH=$(pwd)
-
 
 DOCKER=/usr/bin/docker
 SQLITE=/usr/bin/sqlite3
@@ -82,18 +82,23 @@ function maintenance_mode() {
 	return $?
 }
 
-
-## Create tmp dir
-TMPDIR=$(mktemp -d)
-
-trap 'rm -rf "$TMPDIR"' EXIT
+# Create tmp dir
+if [ -n "$TMP_PREFIX" ]; then
+  mkdir -p "$TMP_PREFIX"
+  TMPDIR=$(mktemp -d -p "$TMP_PREFIX" -t "nextcloud.XXXXXX")
+else
+  TMPDIR=$(mktemp -d -t "nextcloud.XXXXXX")
+fi
 
 if [[ ! "$TMPDIR" || ! -d "$TMPDIR" ]]; then
 	echoerr "Could not create temporary directory!"
 	exit 1
 fi;
 
-pushd $TMPDIR || exit
+# Make sure we remove the tmp directory on exit and errors
+trap 'rm -rf "$TMPDIR"' EXIT
+
+pushd "$TMPDIR" || exit
 
 ## Activate Maintenance Mode
 maintenance_mode on
@@ -153,12 +158,8 @@ done
 mv "$TMPDIR/db.dump.bz2" "$NC_DSTPATH"
 
 ## Cleanup
-echo "Cleanup …"
-
 popd || exit
 
-if [ -d "$TMPDIR" ]; then
-	rm -rf "$TMPDIR"
-fi 
+# $TMPDIR will be removed by the trap
 
 echo "Done."
