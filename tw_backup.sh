@@ -10,6 +10,9 @@
 # For the process see
 # https://twenty.com/developers/section/self-hosting/upgrade-guide
 #
+# Note: This script is intended to be run from a cron job and therefore does not
+# have access to a terminal. All output is sent to stdout/stderr.
+#
 # Author: Stefan Haun <tux@netz39.de>
 #
 # SPDX-License-Identifier: MIT
@@ -74,7 +77,7 @@ pushd "$TMPDIR" || exit
 
 ## Dump Database
 echo "Dumping database …"
-$DOCKER exec -it $DEFAULT_TW_DB_INSTANCE pg_dumpall -U "$TW_POSTGRES_USER" > "$TMPDIR/tw_database.sql"
+$DOCKER exec $DEFAULT_TW_DB_INSTANCE pg_dumpall -U "$TW_POSTGRES_USER" > "$TMPDIR/tw_database.sql"
 $BZIP2 "$TMPDIR/tw_database.sql"
 
 ## Copy to backup location
