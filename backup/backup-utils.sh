@@ -5,6 +5,15 @@ function echoerr() {
   printf "%s\n" "$*" >&2
 }
 
+# Safe popd that only pops if there is something to pop
+# Usage: safe_popd
+safe_popd() {
+  # Only popd if we actually pushed
+  if [ "$(dirs -p | wc -l)" -gt 1 ]; then
+    popd  || true
+  fi
+}
+
 # Propagate the error condition of the last command
 # Usage: propagate_error_condition
 #   If the last command returned a non-zero exit code, exit the script with that code

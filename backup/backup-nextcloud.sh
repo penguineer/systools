@@ -38,7 +38,11 @@ set_default_argument NC_DSTPATH "$DEFAULT_NC_DSTPATH" "destination path"
 
 DIRS=( "config" "data" "themes" "apps")
 
-
+# Function to enable/disable maintenance mode
+# Usage: maintenance_mode MODE
+#   MODE is either "on" or "off"
+#   Returns 0 on success, 1 on failure
+LAST_MAINTENANCE_MODE=""
 function maintenance_mode() {
 	local MODE=$1
 	
@@ -46,6 +50,8 @@ function maintenance_mode() {
 		echoerr "Maintenance mode has not been specified!"
 		return 1
 	fi
+
+	LAST_MAINTENANCE_MODE="$MODE"
 	
 	if [ "$MODE" == "on" ] || [ "$MODE" == "off" ]; then
 		#maintenance mode
@@ -62,8 +68,15 @@ function maintenance_mode() {
 TMPDIR=$(create_tmpdir "nextcloud" "$TMP_PREFIX")
 echo "Using temporary directory $TMPDIR"
 
-# Make sure we remove the tmp directory on exit and errors
-trap 'rm -rf "$TMPDIR"' EXIT
+cleanup() {
+  if [ "$LAST_MAINTENANCE_MODE" == "on" ]; then
+    echo "Deactivating maintenance mode …"
+    maintenance_mode off
+  fi
+  safe_popd
+  rm -rf "$TMPDIR"
+}
+trap cleanup EXIT
 
 pushd "$TMPDIR" || exit
 
@@ -120,9 +133,5 @@ done
 
 mv "$TMPDIR/db.dump.bz2" "$NC_DSTPATH"
 
-## Cleanup
-popd || exit
-
-# $TMPDIR will be removed by the trap
-
 echo "Done."
+## Cleanup is done by the trap

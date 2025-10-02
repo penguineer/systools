@@ -41,8 +41,11 @@ set_default_argument TW_DSTPATH "$DEFAULT_TW_DSTPATH" "destination path"
 TMPDIR=$(create_tmpdir "twenty" "$TMP_PREFIX")
 echo "Using temporary directory $TMPDIR"
 
-# Make sure we remove the tmp directory on exit and errors
-trap 'rm -rf "$TMPDIR"' EXIT
+cleanup() {
+  safe_popd
+  rm -rf "$TMPDIR"
+}
+trap cleanup EXIT
 
 pushd "$TMPDIR" || exit
 
@@ -66,9 +69,6 @@ fi
 
 mv "$TMPDIR/tw_database.sql.bz2" "$TW_DSTPATH"
 
-## Cleanup
-popd || exit
-
-# $TMPDIR will be removed by the trap
-
 echo "Done."
+## Cleanup is done by the trap
+
