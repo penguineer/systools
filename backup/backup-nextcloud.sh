@@ -23,6 +23,9 @@
 # Include utils
 . "$(dirname "$0")/backup-utils.sh"
 
+# Abort and clean up when interrupted
+trap 'exit 130' INT
+
 require_command DOCKER docker
 require_command SQLITE sqlite3
 require_command TAR tar

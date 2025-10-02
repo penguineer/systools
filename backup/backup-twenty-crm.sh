@@ -20,6 +20,8 @@
 # License-Filename: LICENSES/MIT.txt
 
 set -Eeuo pipefail
+# Abort and clean up when interrupted
+trap 'exit 130' INT
 
 # Include utils
 . "$(dirname "$0")/backup-utils.sh"
