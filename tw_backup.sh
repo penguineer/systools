@@ -74,7 +74,7 @@ pushd "$TMPDIR" || exit
 
 ## Dump Database
 echo "Dumping database …"
-$DOCKER exec -it $DEFAULT_TW_DB_INSTANCE pg_dumpall -U "$TW_POSTGRES_USER" > "$TMPDIR/tw_database.sql"
+$DOCKER exec $DEFAULT_TW_DB_INSTANCE pg_dumpall -U "$TW_POSTGRES_USER" > "$TMPDIR/tw_database.sql"
 $BZIP2 "$TMPDIR/tw_database.sql"
 
 ## Copy to backup location
