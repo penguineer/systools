@@ -32,6 +32,28 @@ function set_default_argument() {
   fi
 }
 
+# Ensure that a command exists in PATH and assign its full path to a variable
+# Usage: require_command VAR_NAME COMMAND
+#   VAR_NAME is the name of the variable to assign the command path to
+#   COMMAND  is the command to check for in PATH
+#   If the command is not found, the script exits with an error
+require_command() {
+  local var_name="$1"
+  local cmd="$2"
+  local path
+
+  path="$(command -v "$cmd")"
+
+  if [ -z "$path" ]; then
+    echoerr "Error: $cmd not found in PATH."
+    exit 1
+  fi
+
+  echo "Found $cmd at $path"
+
+  eval "$var_name=\"$path\""
+}
+
 # Create a temporary directory
 # Usage: TMPDIR=$(create_tmpdir APP_NAME [PREFIX])
 #   APP_NAME is used as a prefix for the temp directory name

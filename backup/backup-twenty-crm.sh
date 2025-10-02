@@ -24,17 +24,8 @@ set -Eeuo pipefail
 # Include utils
 . "$(dirname "$0")/backup-utils.sh"
 
-DOCKER="$(command -v docker)"
-BZIP2="$(command -v bzip2)"
-
-if [ -z "$DOCKER" ]; then
-  echo "Error: docker not found in PATH." >&2
-  exit 1
-fi
-if [ -z "$BZIP2" ]; then
-  echo "Error: bzip2 not found in PATH." >&2
-  exit 1
-fi
+require_command DOCKER docker
+require_command BZIP2 bzip2
 
 ## Check arguments
 DEFAULT_TW_DB_INSTANCE=twenty-db-1

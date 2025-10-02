@@ -20,11 +20,10 @@
 # Include utils
 . "$(dirname "$0")/backup-utils.sh"
 
-DOCKER=/usr/bin/docker
-SQLITE=/usr/bin/sqlite3
-TAR=/bin/tar
-BZIP2=/bin/bzip2
-DIRS=( "config" "data" "themes" "apps")
+require_command DOCKER docker
+require_command SQLITE sqlite3
+require_command TAR tar
+require_command BZIP2 bzip2
 
 ## Check arguments
 DEFAULT_NC_INSTANCE=nextcloud
@@ -36,6 +35,8 @@ set_default_argument NC_INSTANCE "$DEFAULT_NC_INSTANCE" "instance"
 set_default_argument NC_USER "$DEFAULT_NC_USER" "user"
 set_default_argument NC_BASE "$DEFAULT_NC_BASE" "base path"
 set_default_argument NC_DSTPATH "$DEFAULT_NC_DSTPATH" "destination path"
+
+DIRS=( "config" "data" "themes" "apps")
 
 
 function maintenance_mode() {
@@ -88,14 +89,19 @@ fi
 
 ## Export Database
 echo "Exporting database …"
+
 $SQLITE "$TMPDIR/data/owncloud.db" .dump > "$TMPDIR/db.dump"
+propagate_error_condition
+
 $BZIP2 "$TMPDIR/db.dump"
+propagate_error_condition
 
 ## Pack File Data
 echo "Packing file data …"
 for d in "${DIRS[@]}"
 do
-	tar cjf "$TMPDIR/$d.tar.bz2" "$d"
+	$TAR cjf "$TMPDIR/$d.tar.bz2" "$d"
+	propagate_error_condition
 done
 
 ## Copy to backup location
