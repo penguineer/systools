@@ -22,6 +22,9 @@ DEFAULT_NC_USER=www-data
 DEFAULT_NC_BASE=/var/www/html
 DEFAULT_NC_DSTPATH=$(pwd)
 
+# Include utils
+. "$(dirname "$0")/backup-utils.sh"
+
 DOCKER=/usr/bin/docker
 SQLITE=/usr/bin/sqlite3
 TAR=/bin/tar
@@ -56,12 +59,6 @@ if [ -z "$NC_DSTPATH" ]; then
 else
 	echo "Using override destination path $NC_DSTPATH."
 fi
-
-
-# https://stackoverflow.com/questions/2990414/echo-that-outputs-to-stderr
-function echoerr() {
-	printf "%s\n" "$*" >&2;
-}
 
 function maintenance_mode() {
 	local MODE=$1

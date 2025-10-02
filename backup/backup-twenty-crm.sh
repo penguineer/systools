@@ -25,6 +25,9 @@ DEFAULT_TW_DB_INSTANCE=twenty-db-1
 DEFAULT_TW_POSTGRES_USER=postgres
 DEFAULT_TW_DSTPATH=$(pwd)
 
+# Include utils
+. "$(dirname "$0")/backup-utils.sh"
+
 DOCKER="$(command -v docker)"
 BZIP2="$(command -v bzip2)"
 
@@ -58,11 +61,6 @@ else
 	echo "Using override destination path $TW_DSTPATH."
 fi
 
-
-# https://stackoverflow.com/questions/2990414/echo-that-outputs-to-stderr
-function echoerr() {
-	printf "%s\n" "$*" >&2;
-}
 
 # Create tmp dir
 if [ -n "$TMP_PREFIX" ]; then
