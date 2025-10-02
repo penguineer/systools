@@ -41,6 +41,14 @@ function set_default_argument() {
   fi
 }
 
+assert_env() {
+  local var_name="$1"
+  if [[ -z "${!var_name-}" ]]; then
+    echo "Error: $var_name environment variable is not set." >&2
+    exit 1
+  fi
+}
+
 # Ensure that a command exists in PATH and assign its full path to a variable
 # Usage: require_command VAR_NAME COMMAND
 #   VAR_NAME is the name of the variable to assign the command path to
