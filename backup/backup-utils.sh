@@ -21,3 +21,36 @@ function set_default_argument() {
     [ -n "$label" ] && echo "Using override $label ${!var_name}."
   fi
 }
+
+# Create a temporary directory
+# Usage: TMPDIR=$(create_tmpdir APP_NAME [PREFIX])
+#   APP_NAME is used as a prefix for the temp directory name
+#   PREFIX   is an optional directory where the temp dir should be created
+#            If PREFIX is not provided, the system default temp directory is used
+#   Returns the path to the created temp directory
+create_tmpdir() {
+  local app="$1"
+  local prefix="$2"
+  local template="${app}.XXXXXX"
+  local tmpdir
+
+  if [ -z "$app" ]; then
+    echoerr "App name has not been provided!"
+    exit 1
+  fi
+
+  echo -n "Creating temporary directory: "
+  if [ -n "$prefix" ]; then
+    mkdir -p "$prefix"
+    tmpdir=$(mktemp -d -p "$prefix" -t "$template")
+  else
+    tmpdir=$(mktemp -d -t "$template")
+  fi
+
+  if [[ ! "$tmpdir" || ! -d "$tmpdir" ]]; then
+    echoerr "Could not create temporary directory!"
+    exit 1
+  fi
+
+  echo "$tmpdir"
+}

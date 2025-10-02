@@ -47,17 +47,8 @@ set_default_argument TW_DSTPATH "$DEFAULT_TW_DSTPATH" "destination path"
 
 
 # Create tmp dir
-if [ -n "$TMP_PREFIX" ]; then
-  mkdir -p "$TMP_PREFIX"
-  TMPDIR=$(mktemp -d -p "$TMP_PREFIX" -t "twentycrm.XXXXXX")
-else
-  TMPDIR=$(mktemp -d -t "twentycrm.XXXXXX")
-fi
-
-if [[ ! "$TMPDIR" || ! -d "$TMPDIR" ]]; then
-	echoerr "Could not create temporary directory!"
-	exit 1
-fi;
+TMPDIR=$(create_tmpdir "twenty" "$TMP_PREFIX")
+echo "Using temporary directory $TMPDIR"
 
 # Make sure we remove the tmp directory on exit and errors
 trap 'rm -rf "$TMPDIR"' EXIT

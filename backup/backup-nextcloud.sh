@@ -58,17 +58,8 @@ function maintenance_mode() {
 }
 
 # Create tmp dir
-if [ -n "$TMP_PREFIX" ]; then
-  mkdir -p "$TMP_PREFIX"
-  TMPDIR=$(mktemp -d -p "$TMP_PREFIX" -t "nextcloud.XXXXXX")
-else
-  TMPDIR=$(mktemp -d -t "nextcloud.XXXXXX")
-fi
-
-if [[ ! "$TMPDIR" || ! -d "$TMPDIR" ]]; then
-	echoerr "Could not create temporary directory!"
-	exit 1
-fi;
+TMPDIR=$(create_tmpdir "nextcloud" "$TMP_PREFIX")
+echo "Using temporary directory $TMPDIR"
 
 # Make sure we remove the tmp directory on exit and errors
 trap 'rm -rf "$TMPDIR"' EXIT
