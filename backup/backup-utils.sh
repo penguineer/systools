@@ -5,6 +5,16 @@ function echoerr() {
   printf "%s\n" "$*" >&2
 }
 
+# Propagate the error condition of the last command
+# Usage: propagate_error_condition
+#   If the last command returned a non-zero exit code, exit the script with that code
+propagate_error_condition() {
+  local exit_code=$?
+  if [ "$exit_code" != "0" ]; then
+    exit "$exit_code"
+  fi
+}
+
 # Set variable to a default value if not already set
 # Usage: get_argument VAR_NAME DEFAULT_VALUE LABEL
 #
@@ -39,7 +49,6 @@ create_tmpdir() {
     exit 1
   fi
 
-  echo -n "Creating temporary directory: "
   if [ -n "$prefix" ]; then
     mkdir -p "$prefix"
     tmpdir=$(mktemp -d -p "$prefix" -t "$template")

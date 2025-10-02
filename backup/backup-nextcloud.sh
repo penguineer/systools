@@ -68,9 +68,7 @@ pushd "$TMPDIR" || exit
 
 ## Activate Maintenance Mode
 maintenance_mode on
-if [ "$?" != "0" ]; then
-	exit $?
-fi
+propagate_error_condition
 
 ## Copy backup data
 
@@ -78,9 +76,7 @@ for d in "${DIRS[@]}"
 do
 	echo "Copying from $NC_INSTANCE:$NC_BASE/$d to $TMPDIR …"
 	$DOCKER cp -a "$NC_INSTANCE:$NC_BASE/$d" "$TMPDIR"
-	if [ "$?" != "0" ]; then
-		exit $?
-	fi
+	propagate_error_condition
 done
 
 ## Deactivate Maintenance Mode
