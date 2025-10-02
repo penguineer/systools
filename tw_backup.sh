@@ -6,6 +6,7 @@
 #	TW_DB_INSTANCE	name of the Twenty DB docker container (default: twenty-db-1)
 # TW_POSTGRES_USER name of the postgres user (default: postgres)
 #	TW_DSTPATH	destination base path for the backup (default: pwd)
+# TMP_PREFIX  prefix for the temporary directory (default: auto, see mktemp)
 #
 # For the process see
 # https://twenty.com/developers/section/self-hosting/upgrade-guide
@@ -63,15 +64,21 @@ function echoerr() {
 	printf "%s\n" "$*" >&2;
 }
 
-## Create tmp dir
-TMPDIR=$(mktemp -d)
-
-trap 'rm -rf "$TMPDIR"' EXIT
+# Create tmp dir
+if [ -n "$TMP_PREFIX" ]; then
+  mkdir -p "$TMP_PREFIX"
+  TMPDIR=$(mktemp -d -p "$TMP_PREFIX" -t "twentycrm.XXXXXX")
+else
+  TMPDIR=$(mktemp -d -t "twentycrm.XXXXXX")
+fi
 
 if [[ ! "$TMPDIR" || ! -d "$TMPDIR" ]]; then
 	echoerr "Could not create temporary directory!"
 	exit 1
 fi;
+
+# Make sure we remove the tmp directory on exit and errors
+trap 'rm -rf "$TMPDIR"' EXIT
 
 pushd "$TMPDIR" || exit
 
@@ -97,12 +104,8 @@ fi
 mv "$TMPDIR/tw_database.sql.bz2" "$TW_DSTPATH"
 
 ## Cleanup
-echo "Cleanup …"
-
 popd || exit
 
-if [ -d "$TMPDIR" ]; then
-	rm -rf "$TMPDIR"
-fi
+# $TMPDIR will be removed by the trap
 
 echo "Done."
