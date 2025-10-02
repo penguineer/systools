@@ -21,10 +21,6 @@
 
 set -Eeuo pipefail
 
-DEFAULT_TW_DB_INSTANCE=twenty-db-1
-DEFAULT_TW_POSTGRES_USER=postgres
-DEFAULT_TW_DSTPATH=$(pwd)
-
 # Include utils
 . "$(dirname "$0")/backup-utils.sh"
 
@@ -39,27 +35,15 @@ if [ -z "$BZIP2" ]; then
   echo "Error: bzip2 not found in PATH." >&2
   exit 1
 fi
-## Check parameters
-if [ -z "${TW_DB_INSTANCE:-}" ]; then
-	TW_DB_INSTANCE=$DEFAULT_TW_DB_INSTANCE
-	echo "Using default instance $TW_DB_INSTANCE."
-else
-	echo "Using override instance $TW_DB_INSTANCE."
-fi
 
-if [ -z "${TW_POSTGRES_USER:-}" ]; then
-  TW_POSTGRES_USER=$DEFAULT_TW_POSTGRES_USER
-  echo "Using default postgres user $TW_POSTGRES_USER."
-else
-  echo "Using override postgres user $TW_POSTGRES_USER."
-fi
+## Check arguments
+DEFAULT_TW_DB_INSTANCE=twenty-db-1
+DEFAULT_TW_POSTGRES_USER=postgres
+DEFAULT_TW_DSTPATH=$(pwd)
 
-if [ -z "${TW_DSTPATH:-}" ]; then
-	TW_DSTPATH=$DEFAULT_TW_DSTPATH
-	echo "Using default destination path $TW_DSTPATH (current working directory)."
-else
-	echo "Using override destination path $TW_DSTPATH."
-fi
+set_default_argument TW_DB_INSTANCE "$DEFAULT_TW_DB_INSTANCE" "instance"
+set_default_argument TW_POSTGRES_USER "$DEFAULT_TW_POSTGRES_USER" "postgres user"
+set_default_argument TW_DSTPATH "$DEFAULT_TW_DSTPATH" "destination path"
 
 
 # Create tmp dir
@@ -87,11 +71,6 @@ $BZIP2 "$TMPDIR/tw_database.sql"
 
 ## Copy to backup location
 echo "Copy to backup location …"
-
-if [ -z "$TW_DSTPATH" ]; then
-	echoerr "Destination path has not been provided in TW_DSTPATH!"
-	exit 1
-fi
 
 mkdir -p "$TW_DSTPATH"
 if [ ! -d "$TW_DSTPATH" ]; then

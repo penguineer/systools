@@ -17,11 +17,6 @@
 # SPDX-License-Identifier: MIT
 # License-Filename: LICENSES/MIT.txt
 
-DEFAULT_NC_INSTANCE=nextcloud
-DEFAULT_NC_USER=www-data
-DEFAULT_NC_BASE=/var/www/html
-DEFAULT_NC_DSTPATH=$(pwd)
-
 # Include utils
 . "$(dirname "$0")/backup-utils.sh"
 
@@ -31,34 +26,17 @@ TAR=/bin/tar
 BZIP2=/bin/bzip2
 DIRS=( "config" "data" "themes" "apps")
 
-## Check parameters
-if [ -z "$NC_INSTANCE" ]; then
-	NC_INSTANCE=$DEFAULT_NC_INSTANCE
-	echo "Using default instance $NC_INSTANCE."
-else
-	echo "Using override instance $NC_INSTANCE."
-fi
+## Check arguments
+DEFAULT_NC_INSTANCE=nextcloud
+DEFAULT_NC_USER=www-data
+DEFAULT_NC_BASE=/var/www/html
+DEFAULT_NC_DSTPATH=$(pwd)
 
-if [ -z "$NC_USER" ]; then
-	NC_USER=$DEFAULT_NC_USER
-	echo "Using default user $NC_USER."
-else
-	echo "Using override user $NC_USER."
-fi
+set_default_argument NC_INSTANCE "$DEFAULT_NC_INSTANCE" "instance"
+set_default_argument NC_USER "$DEFAULT_NC_USER" "user"
+set_default_argument NC_BASE "$DEFAULT_NC_BASE" "base path"
+set_default_argument NC_DSTPATH "$DEFAULT_NC_DSTPATH" "destination path"
 
-if [ -z "$NC_BASE" ]; then
-	NC_BASE=$DEFAULT_NC_BASE
-	echo "Using default base path $NC_BASE."
-else
-	echo "Using override base path $NC_BASE."
-fi
-
-if [ -z "$NC_DSTPATH" ]; then
-	NC_DSTPATH=$DEFAULT_NC_DSTPATH
-	echo "Using default destination path $NC_DSTPATH (current wirking directory)."
-else
-	echo "Using override destination path $NC_DSTPATH."
-fi
 
 function maintenance_mode() {
 	local MODE=$1
@@ -135,11 +113,6 @@ done
 
 ## Copy to backup location
 echo "Copy to backup location …"
-
-if [ -z "$NC_DSTPATH" ]; then
-	echoerr "Destination path has not been provided in NC_DSTPATH!"
-	exit 1
-fi
 
 mkdir -p "$NC_DSTPATH"
 if [ ! -d "$NC_DSTPATH" ]; then
