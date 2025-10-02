@@ -53,7 +53,7 @@ pushd "$TMPDIR" || exit
 
 ## Dump Database
 echo "Dumping database …"
-$DOCKER exec $DEFAULT_TW_DB_INSTANCE pg_dumpall -U "$TW_POSTGRES_USER" > "$TMPDIR/tw_database.sql"
+$DOCKER exec "$TW_DB_INSTANCE" pg_dumpall -U "$TW_POSTGRES_USER" > "$TMPDIR/tw_database.sql"
 propagate_error_condition
 
 echo "Compressing database dump …"
