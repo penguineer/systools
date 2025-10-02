@@ -10,6 +10,9 @@
 # For the process see
 # https://twenty.com/developers/section/self-hosting/upgrade-guide
 #
+# Note: This script is intended to be run from a cron job and therefore does not
+# have access to a terminal. All output is sent to stdout/stderr.
+#
 # Author: Stefan Haun <tux@netz39.de>
 #
 # SPDX-License-Identifier: MIT
