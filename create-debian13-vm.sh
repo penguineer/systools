@@ -167,9 +167,6 @@ users:
   - name: $VMUSER
     shell: /bin/bash
     sudo: ['ALL=(ALL) NOPASSWD:ALL']
-    # shellcheck disable=SC2034
-    # shellcheck disable=SC2034
-    # shellcheck disable=SC2034
     ssh-authorized-keys:
       - $PUBKEY
     lock_passwd: true
