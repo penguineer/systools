@@ -1,0 +1,15 @@
+[Unit]
+Description=AKG Ara microphone hardware key handler (wpctl)
+After=pipewire.service wireplumber.service
+Wants=pipewire.service wireplumber.service
+
+[Service]
+Type=simple
+ExecStart={{ script_path }}/akg-ara-mic-wpctl.py
+Restart=on-failure
+RestartSec=2
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
