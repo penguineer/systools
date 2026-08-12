@@ -19,7 +19,7 @@ PW_SOURCE_NAME_MATCH = "AKG Ara USB Microphone Mono"
 
 STEP = "5%"  # volume step
 
-def run(cmd: list[str]) -> str:
+def run(cmd: list[str]) -> str | None:
     """Run a shell command and return stdout as text."""
     result = subprocess.run(cmd,
                             check=False,
@@ -34,12 +34,12 @@ def find_input_device() -> InputDevice:
         dev = InputDevice(path)
         if INPUT_NAME_MATCH in dev.name:
             return dev
-    print(f"Warn: could not find input device matching '{INPUT_NAME_MATCH}'", file=sys.stdio)
+    print(f"Warn: could not find input device matching '{INPUT_NAME_MATCH}'", file=sys.stdout)
 
     return None
 
 
-def find_pw_source_id() -> str:
+def find_pw_source_id() -> str | None:
     """
     Parse `wpctl status` and return the ID of the audio source whose name
     contains PW_SOURCE_NAME_MATCH.
@@ -91,7 +91,7 @@ def find_pw_source_id() -> str:
 
     print(
         f"Warn: could not find PipeWire source matching '{PW_SOURCE_NAME_MATCH}'",
-        file=sys.stdio,
+        file=sys.stdout,
     )
 
     return None
