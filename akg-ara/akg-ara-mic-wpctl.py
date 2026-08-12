@@ -9,6 +9,7 @@ from evdev import InputDevice, list_devices, ecodes
 import subprocess
 import sys
 import re
+import time
 
 # Substring of the input device name as shown by evtest/lsinput
 INPUT_NAME_MATCH = "C-Media Electronics Inc. AKG Ara USB Microphone"
@@ -18,7 +19,7 @@ PW_SOURCE_NAME_MATCH = "AKG Ara USB Microphone Mono"
 
 STEP = "5%"  # volume step
 
-def run(cmd: list[str]) -> str:
+def run(cmd: list[str]) -> str | None:
     """Run a shell command and return stdout as text."""
     result = subprocess.run(cmd,
                             check=False,
@@ -33,11 +34,12 @@ def find_input_device() -> InputDevice:
         dev = InputDevice(path)
         if INPUT_NAME_MATCH in dev.name:
             return dev
-    print(f"Error: could not find input device matching '{INPUT_NAME_MATCH}'", file=sys.stderr)
-    sys.exit(1)
+    print(f"Warn: could not find input device matching '{INPUT_NAME_MATCH}'", file=sys.stdout)
+
+    return None
 
 
-def find_pw_source_id() -> str:
+def find_pw_source_id() -> str | None:
     """
     Parse `wpctl status` and return the ID of the audio source whose name
     contains PW_SOURCE_NAME_MATCH.
@@ -88,10 +90,32 @@ def find_pw_source_id() -> str:
             return source_id
 
     print(
-        f"Error: could not find PipeWire source matching '{PW_SOURCE_NAME_MATCH}'",
-        file=sys.stderr,
+        f"Warn: could not find PipeWire source matching '{PW_SOURCE_NAME_MATCH}'",
+        file=sys.stdout,
     )
-    sys.exit(1)
+
+    return None
+
+def get_volume_percent(source_id: str) -> int | None:
+    output = run(["wpctl", "get-volume", source_id])
+
+    # Example:
+    # Volume: 1.25 [MUTED]
+    m = re.search(r"Volume:\s+([0-9.]+)", output)
+    if not m:
+        return None
+
+    return round(float(m.group(1)) * 100)
+
+
+def show_microphone_osd(percent: int) -> None:
+    run([
+        "qdbus6",
+        "org.kde.plasmashell",
+        "/org/kde/osdService",
+        "org.kde.osdService.microphoneVolumeChanged",
+        str(percent),
+    ])
 
 def handle_key(code: int, value: int, source_id: str) -> None:
     # value: 1=press, 0=release, 2=autorepeat
@@ -105,13 +129,52 @@ def handle_key(code: int, value: int, source_id: str) -> None:
     elif code in (ecodes.KEY_MICMUTE, ecodes.KEY_MUTE):
         run(["wpctl", "set-mute", source_id, "toggle"])
 
-def main() -> int:
-    # Resolve the PipeWire source ID at startup
-    source_id = find_pw_source_id()
-    print(f"Using PipeWire source ID: {source_id}")
+    percent = get_volume_percent(source_id)
+    if percent is not None:
+        show_microphone_osd(percent)
 
-    # Find the AKG Ara input device by name
-    dev = find_input_device()
+def main() -> int:
+    source_id = None
+    dev = None
+
+    RETRY_INTERVAL = 0.5
+    RETRY_COUNT = 20
+
+    for attempt in range(1, RETRY_COUNT + 1):
+        if source_id is None:
+            # Resolve the PipeWire source ID at startup
+            source_id = find_pw_source_id()
+
+        if dev is None:
+            # Find the AKG Ara input device by name
+            dev = find_input_device()
+
+        if source_id is not None and dev is not None:
+                    break
+
+        if attempt < RETRY_COUNT:
+            time.sleep(RETRY_INTERVAL)
+    # for
+
+    if source_id is None:
+        print(
+            f"Error: could not find PipeWire source matching "
+            f"'{PW_SOURCE_NAME_MATCH}' after "
+            f"{RETRY_COUNT * RETRY_INTERVAL:.1f}s",
+            file=sys.stderr,
+        )
+        return 1
+
+    if dev is None:
+        print(
+            f"Error: could not find input device matching "
+            f"'{INPUT_NAME_MATCH}' after "
+            f"{RETRY_COUNT * RETRY_INTERVAL:.1f}s",
+            file=sys.stderr,
+        )
+        return 1
+
+    print(f"Using PipeWire source ID: {source_id}")
     print(f"Listening on {dev.path} ({dev.name})")
 
     # Grab the device so the events do not also reach the desktop/system
