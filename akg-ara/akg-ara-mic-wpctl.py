@@ -96,6 +96,27 @@ def find_pw_source_id() -> str:
 
     return None
 
+def get_volume_percent(source_id: str) -> int | None:
+    output = run(["wpctl", "get-volume", source_id])
+
+    # Example:
+    # Volume: 1.25 [MUTED]
+    m = re.search(r"Volume:\s+([0-9.]+)", output)
+    if not m:
+        return None
+
+    return round(float(m.group(1)) * 100)
+
+
+def show_microphone_osd(percent: int) -> None:
+    run([
+        "qdbus6",
+        "org.kde.plasmashell",
+        "/org/kde/osdService",
+        "org.kde.osdService.microphoneVolumeChanged",
+        str(percent),
+    ])
+
 def handle_key(code: int, value: int, source_id: str) -> None:
     # value: 1=press, 0=release, 2=autorepeat
     if value != 1:
@@ -107,6 +128,10 @@ def handle_key(code: int, value: int, source_id: str) -> None:
         run(["wpctl", "set-volume", source_id, f"{STEP}-"])
     elif code in (ecodes.KEY_MICMUTE, ecodes.KEY_MUTE):
         run(["wpctl", "set-mute", source_id, "toggle"])
+
+    percent = get_volume_percent(source_id)
+    if percent is not None:
+        show_microphone_osd(percent)
 
 def main() -> int:
     source_id = None
