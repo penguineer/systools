@@ -68,6 +68,7 @@ require_local_command grep
 require_local_command date
 require_local_command mkdir
 require_local_command mv
+require_local_command rm
 
 if command -v sha256sum >/dev/null 2>&1; then
     CHECKSUM_TOOL=sha256sum
@@ -100,12 +101,30 @@ checksum_verify() {
     esac
 }
 
-# Backup contents may contain credentials and other secrets.
+# Backup contents and the SSH control socket may contain or grant access to
+# sensitive material. Keep all newly created files private to the invoking user.
 umask 077
 
 STAMP=$(date '+%Y-%m-%d_%H%M%S')
 DEST="$BACKUP_ROOT/router-$STAMP"
 WORK="$BACKUP_ROOT/.router-$STAMP.partial"
+CONTROL_PATH="$BACKUP_ROOT/.openwrt-backup-ssh-$$.sock"
+MASTER_STARTED=0
+
+cleanup() {
+    if [ "$MASTER_STARTED" -eq 1 ]; then
+        ssh \
+            -o BatchMode=yes \
+            -o ControlPath="$CONTROL_PATH" \
+            -O exit \
+            -- \
+            "$TARGET" >/dev/null 2>&1 || true
+    fi
+
+    rm -f "$CONTROL_PATH"
+}
+
+trap cleanup EXIT HUP INT TERM
 
 mkdir -p "$BACKUP_ROOT"
 
@@ -116,13 +135,36 @@ if [ -e "$WORK" ] || [ -e "$DEST" ]; then
     exit 1
 fi
 
+if [ -e "$CONTROL_PATH" ]; then
+    error "SSH control path already exists: $CONTROL_PATH"
+    exit 1
+fi
+
 mkdir "$WORK"
+
+printf '%s\n' "Opening SSH master connection to $TARGET ..."
+if ! ssh \
+    -o BatchMode=yes \
+    -o ConnectTimeout=10 \
+    -o ConnectionAttempts=1 \
+    -o ControlMaster=yes \
+    -o ControlPath="$CONTROL_PATH" \
+    -o ControlPersist=no \
+    -Nf \
+    -- \
+    "$TARGET"
+then
+    error "could not establish SSH connection to $TARGET"
+    echo "Partial data retained at: $WORK" >&2
+    exit 1
+fi
+MASTER_STARTED=1
 
 ssh_router() {
     ssh \
         -o BatchMode=yes \
-        -o ConnectTimeout=10 \
-        -o ConnectionAttempts=1 \
+        -o ControlMaster=no \
+        -o ControlPath="$CONTROL_PATH" \
         -- \
         "$TARGET" "$@"
 }
@@ -134,6 +176,7 @@ fail() {
 }
 
 printf '%s\n' "Checking remote OpenWrt prerequisites on $TARGET ..."
+# shellcheck disable=SC2016
 if ! ssh_router '
     for cmd in sysupgrade uci ubus ip; do
         command -v "$cmd" >/dev/null 2>&1 || {
