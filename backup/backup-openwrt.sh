@@ -124,7 +124,12 @@ cleanup() {
     rm -f "$CONTROL_PATH"
 }
 
-trap cleanup EXIT HUP INT TERM
+# EXIT owns cleanup. Signal handlers terminate explicitly, which then causes
+# the EXIT trap to run exactly once.
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 mkdir -p "$BACKUP_ROOT"
 
