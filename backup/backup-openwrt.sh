@@ -3,19 +3,48 @@
 # Create and validate a recovery snapshot from an OpenWrt router.
 #
 # Usage:
-#   openwrt-backup <router-target> <backup-directory>
+#   backup-openwrt.sh <router-target> <backup-directory>
 #
 # Example:
-#   openwrt-backup root@router "/Vault/Backup/Router"
+#   backup-openwrt.sh root@router "/var/backups/openwrt/router"
 #
 # A timestamped snapshot directory is created below <backup-directory>.
 # The final directory appears only after the snapshot has been validated.
+#
+# Local requirements:
+#   - POSIX shell
+#   - ssh
+#   - tar with gzip support
+#   - grep
+#   - sha256sum, or shasum with SHA-256 support
+#
+# Remote requirements:
+#   - OpenWrt
+#   - sysupgrade
+#   - uci
+#   - ubus
+#   - ip
+#
+# The installed package inventory supports both apk and opkg when available.
 
 set -eu
 
+PROG=${0##*/}
+
 usage() {
-    echo "Usage: $0 <router-target> <backup-directory>" >&2
+    echo "Usage: $PROG <router-target> <backup-directory>" >&2
     exit 2
+}
+
+error() {
+    echo "ERROR: $*" >&2
+}
+
+require_local_command() {
+    command -v "$1" >/dev/null 2>&1 || {
+        error "required local command not found: $1"
+        exit 1
+    }
 }
 
 [ "$#" -eq 2 ] || usage
@@ -25,6 +54,51 @@ BACKUP_ROOT=$2
 
 [ -n "$TARGET" ] || usage
 [ -n "$BACKUP_ROOT" ] || usage
+
+case "$TARGET" in
+    -*)
+        error "router target must not start with '-'"
+        exit 2
+        ;;
+esac
+
+require_local_command ssh
+require_local_command tar
+require_local_command grep
+require_local_command date
+require_local_command mkdir
+require_local_command mv
+
+if command -v sha256sum >/dev/null 2>&1; then
+    CHECKSUM_TOOL=sha256sum
+elif command -v shasum >/dev/null 2>&1; then
+    CHECKSUM_TOOL=shasum
+else
+    error "required checksum tool not found: need sha256sum or shasum"
+    exit 1
+fi
+
+checksum_create() {
+    case "$CHECKSUM_TOOL" in
+        sha256sum)
+            sha256sum "$@"
+            ;;
+        shasum)
+            shasum -a 256 "$@"
+            ;;
+    esac
+}
+
+checksum_verify() {
+    case "$CHECKSUM_TOOL" in
+        sha256sum)
+            sha256sum -c SHA256SUMS
+            ;;
+        shasum)
+            shasum -a 256 -c SHA256SUMS
+            ;;
+    esac
+}
 
 # Backup contents may contain credentials and other secrets.
 umask 077
@@ -36,7 +110,7 @@ WORK="$BACKUP_ROOT/.router-$STAMP.partial"
 mkdir -p "$BACKUP_ROOT"
 
 if [ -e "$WORK" ] || [ -e "$DEST" ]; then
-    echo "ERROR: snapshot path already exists:" >&2
+    error "snapshot path already exists:"
     echo "  $WORK" >&2
     echo "  $DEST" >&2
     exit 1
@@ -49,14 +123,27 @@ ssh_router() {
         -o BatchMode=yes \
         -o ConnectTimeout=10 \
         -o ConnectionAttempts=1 \
+        -- \
         "$TARGET" "$@"
 }
 
 fail() {
-    echo "ERROR: $1" >&2
+    error "$1"
     echo "Partial data retained at: $WORK" >&2
     exit 1
 }
+
+printf '%s\n' "Checking remote OpenWrt prerequisites on $TARGET ..."
+if ! ssh_router '
+    for cmd in sysupgrade uci ubus ip; do
+        command -v "$cmd" >/dev/null 2>&1 || {
+            echo "Missing required remote command: $cmd" >&2
+            exit 1
+        }
+    done
+'; then
+    fail "remote prerequisite check failed"
+fi
 
 printf '%s\n' "Creating OpenWrt configuration backup from $TARGET ..."
 if ! ssh_router 'sysupgrade -k -b -' > "$WORK/openwrt-backup.tar.gz"; then
@@ -70,12 +157,14 @@ if ! tar -tzf "$WORK/openwrt-backup.tar.gz" > "$WORK/archive-contents.txt"; then
     fail "backup archive is not a readable tar.gz"
 fi
 
-# Minimal recovery sanity checks. These do not attempt to define the complete
-# OpenWrt backup contents; they catch an obviously unusable snapshot.
+# Minimal recovery sanity checks. These do not define the complete OpenWrt
+# backup contents; they catch an obviously unusable snapshot.
 grep -qxF 'etc/config/network' "$WORK/archive-contents.txt" \
     || fail "backup does not contain etc/config/network"
+
 grep -qxF 'etc/config/firewall' "$WORK/archive-contents.txt" \
     || fail "backup does not contain etc/config/firewall"
+
 grep -qxF 'etc/backup/installed_packages.txt' "$WORK/archive-contents.txt" \
     || fail "backup does not contain installed package metadata"
 
@@ -140,7 +229,7 @@ printf '%s\n' "$TARGET" > "$WORK/router-target.txt"
 printf '%s\n' "Calculating checksums ..."
 if ! (
     cd "$WORK"
-    sha256sum \
+    checksum_create \
         openwrt-backup.tar.gz \
         archive-contents.txt \
         sysupgrade-file-list.txt \
@@ -149,7 +238,7 @@ if ! (
         router-target.txt \
         > SHA256SUMS
 
-    sha256sum -c SHA256SUMS
+    checksum_verify
 ); then
     fail "checksum verification failed"
 fi
